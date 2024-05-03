@@ -1,35 +1,167 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, {useCallback, useEffect, useState} from 'react'
+import { global, Auth } from "@/inc/global.ts";
+import '../app/globals.css'
+import { Navbar } from "@/layouts"
+import instance from "@/inc/axios_config.ts";
+import { Toaster } from "@/components/ui/toaster"
+import { toast } from "@/components/ui/use-toast.ts";
+import { Welcome } from "@/components/custom";
+import ApplicationPage from "@/pages/User/ApplicationPage.tsx";
+import {Button} from "@/components/ui/button.tsx";
+import { Pencil2Icon } from "@radix-ui/react-icons";
+import ConfirmationDialog from "@/components/custom/ConfirmationDialog.tsx";
+import {useForm} from "react-hook-form";
 
-function App() {
-  const [count, setCount] = useState(0)
+
+/**
+ * Fetches user information and sets up the initial state of the component.
+ *
+ * @return {React.ReactElement} The JSX to render the component.
+ */
+function App(): React.ReactElement {
+  const [initialLoad, setInitialLoad] = useState<boolean>(true)
+  const [selectionState, setSelectionState] = useState<boolean>(false)
+  const [confirmationDialog, setConfirmationDialog] = useState<boolean>(false)
+  const [auth, setAuth] = useState<Auth>({
+    fname: '',
+    lname: '',
+    email: '',
+    _csrf_token: '',
+    image_url: '',
+    user_access: '',
+  })
+  useEffect(() => {
+
+
+    const fetchUser = async () => {
+      const sessionToken =  await instance.get('?api=session.create')
+      const authInfo = await instance.get('?api=session')
+      return { sessionToken, authInfo }
+    }
+
+    fetchUser().then(({sessionToken, authInfo}: {
+      sessionToken: {
+        data: { message: string }
+      },
+      authInfo: {
+        data: { message: [] }
+      }}
+    ) => {
+      const { data: { message } } = sessionToken
+      const { data: { ...authObject } } = authInfo
+      const { user_info, access_info } = {...authObject.message}
+      setAuth({
+        ...auth,
+        email: user_info[0]?.adamsonmail,
+        fname: user_info[0]?.fname,
+        lname: user_info[0]?.lname,
+        _csrf_token: message,
+        image_url: `https://learn.adamson.edu.ph/primarypicavatar/getuserimg.php?x=${user_info[0]?.id}_2`,
+        user_access: access_info[0]?.user_access
+      })
+      setInitialLoad(false)
+    }).catch((error) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to load",
+        description: error.response.data.message,
+      })
+      setTimeout(() => {
+        window.location.href = global.appUrl
+      }, 1000)
+    })
+
+    setInterval(async () => {
+      try{
+        await instance.get('?api=session.check')
+      }catch (error){
+        toast({
+          variant: "destructive",
+          title: "Session expired.",
+          description: error.response.data.message,
+        })
+        setTimeout(() => {
+          window.location.href = global.appUrl
+        }, 2000)
+      }
+    }, 30000)
+  }, []);
+
+  const handleSelection = () => {
+    if(selectionState){
+      setConfirmationDialog(true)
+    }else{
+      if(!confirmationDialog){
+        setSelectionState(!selectionState)
+      }
+    }
+  }
+
+  const confirmationData = {
+    title: 'Confirmation',
+    description: 'Are you sure you want to edit these data?',
+    action: () => {
+      console.log("TEST")
+    }
+  }
+
 
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className=" overflow-x-hidden">
+      {initialLoad ? (
+        <div className="h-screen flex justify-center items-center bg-blue-950">
+          <div>
+            <h1 className="mx-4 md:mx-0 text-3xl lg:text-7xl text-center font-bold text-white">Adamson University - 201 File</h1>
+            <p className="text-white text-center text-md lg:text-3xl mt-4">Loading...</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <Navbar/>
+          <div className="m-4">
+            {!initialLoad && (
+              <>
+                <Welcome data={{
+                  fname: auth?.fname,
+                  lname: auth?.lname,
+                  email: auth?.email,
+                  image_url: auth?.image_url
+                }}>
+                  <div>
+                    {selectionState && (
+                      <Button variant="outline" className="me-2"
+                        onClick={() => {setSelectionState(false)}}>
+                        Cancel
+                      </Button>
+                    )}
+                    <Button
+                      onClick={() => handleSelection()}
+                      className="dark:bg-white">
+                      {!selectionState ? (
+                        <Pencil2Icon/>
+                      ) : (
+                        <>Apply</>
+                      )}
+                    </Button>
+                  </div>
+                </Welcome>
+                <div className="mt-2">
+                  <ApplicationPage states={{
+                    selectionState
+                  }}/>
+                </div>
+              </>
+            )}
+          </div>
+        </>
+      )}
+  <Toaster/>
+  <ConfirmationDialog states={{
+    dialogState: confirmationDialog,
+    setDialogState: setConfirmationDialog
+  }} dialogData={confirmationData}/>
+</div>
+)
 }
 
 export default App
