@@ -28,6 +28,12 @@ export const global = {
   apiUrl: production ? productionEnv.apiUrl : developmentEnv.apiUrl
 }
 
+export const multiEntryForm = [
+  "school_info",
+  "employment_info",
+  "board_info"
+]
+
 export interface Auth{
   fname:string,
   lname:string,

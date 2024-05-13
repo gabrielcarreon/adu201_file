@@ -1,16 +1,26 @@
-import React, {useCallback, useEffect, useState} from 'react'
+import React, {useEffect, useRef, useState} from 'react'
 import { global, Auth } from "@/inc/global.ts";
 import '../app/globals.css'
 import { Navbar } from "@/layouts"
 import instance from "@/inc/axios_config.ts";
 import { Toaster } from "@/components/ui/toaster"
 import { toast } from "@/components/ui/use-toast.ts";
-import { Welcome } from "@/components/custom";
+import { Welcome, ConfirmationDialog } from "@/components/custom";
 import ApplicationPage from "@/pages/User/ApplicationPage.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import { Pencil2Icon } from "@radix-ui/react-icons";
-import ConfirmationDialog from "@/components/custom/ConfirmationDialog.tsx";
+import EditPage from "@/pages/User/EditPage.tsx";
 import {useForm} from "react-hook-form";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader
+} from "@/components/ui/alert-dialog.tsx";
+import {Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious} from "@/components/ui/carousel.tsx";
+import {Card, CardContent} from "@/components/ui/card.tsx";
 
 
 /**
@@ -22,6 +32,9 @@ function App(): React.ReactElement {
   const [initialLoad, setInitialLoad] = useState<boolean>(true)
   const [selectionState, setSelectionState] = useState<boolean>(false)
   const [confirmationDialog, setConfirmationDialog] = useState<boolean>(false)
+  const applicationPageRef = useRef()
+  const editPageRef = useRef()
+  const [editState, setEditState] = useState<boolean>(false)
   const [auth, setAuth] = useState<Auth>({
     fname: '',
     lname: '',
@@ -30,9 +43,14 @@ function App(): React.ReactElement {
     image_url: '',
     user_access: '',
   })
+  const submitForm = useForm({
+    mode: "onChange",
+  })
+  const [uploadState, setUploadState] = useState(false)
+  const [requiredFiles, setRequiredFiles] = useState([])
+  const [response, setResponse] = useState(false)
+  const [selectedGroup, setSelectedGroup] = useState<[]>([])
   useEffect(() => {
-
-
     const fetchUser = async () => {
       const sessionToken =  await instance.get('?api=session.create')
       const authInfo = await instance.get('?api=session')
@@ -40,13 +58,9 @@ function App(): React.ReactElement {
     }
 
     fetchUser().then(({sessionToken, authInfo}: {
-      sessionToken: {
-        data: { message: string }
-      },
-      authInfo: {
-        data: { message: [] }
-      }}
-    ) => {
+      sessionToken: { data: { message: string } },
+      authInfo: { data: { message: [] } }
+    }) => {
       const { data: { message } } = sessionToken
       const { data: { ...authObject } } = authInfo
       const { user_info, access_info } = {...authObject.message}
@@ -89,6 +103,14 @@ function App(): React.ReactElement {
 
   const handleSelection = () => {
     if(selectionState){
+      if(selectedGroup.length === 0){
+        toast({
+          variant: "destructive",
+          title: "Failed",
+          description: "Must check at least one checkbox to proceed!"
+        })
+        return
+      }
       setConfirmationDialog(true)
     }else{
       if(!confirmationDialog){
@@ -101,10 +123,10 @@ function App(): React.ReactElement {
     title: 'Confirmation',
     description: 'Are you sure you want to edit these data?',
     action: () => {
-      console.log("TEST")
+      setEditState(true)
+      setConfirmationDialog(false)
     }
   }
-
 
   return (
     <div className=" overflow-x-hidden">
@@ -116,7 +138,7 @@ function App(): React.ReactElement {
           </div>
         </div>
       ) : (
-        <>
+        <div>
           <Navbar/>
           <div className="m-4">
             {!initialLoad && (
@@ -130,36 +152,112 @@ function App(): React.ReactElement {
                   <div>
                     {selectionState && (
                       <Button variant="outline" className="me-2"
-                        onClick={() => {setSelectionState(false)}}>
+                        onClick={() => {
+                          setSelectionState(false)
+                          setEditState(false)
+                        }}>
                         Cancel
                       </Button>
                     )}
-                    <Button
-                      onClick={() => handleSelection()}
-                      className="dark:bg-white">
-                      {!selectionState ? (
-                        <Pencil2Icon/>
-                      ) : (
-                        <>Apply</>
-                      )}
-                    </Button>
+                    {!editState ? (
+                      <Button
+                        onClick={() => handleSelection()}
+                        className="dark:bg-white">
+                        {!selectionState ? (
+                          <Pencil2Icon/>
+                        ) : (
+                          <>Apply</>
+                        )}
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          const submitData = submitForm.getValues()
+                          Object.keys(submitData).map((data) => {
+                            if(submitData[data].changed){
+                              submitData[data].attachments.map((attachment) => {
+                                if(!requiredFiles.includes(attachment.attachment_id)){
+                                  setRequiredFiles([...requiredFiles, attachment.attachment_id])
+                                }
+                              })
+                            }
+                          })
+                          setUploadState(true)
+
+                          console.log(requiredFiles)
+                        }}>
+                        Next
+                      </Button>
+                    )}
                   </div>
                 </Welcome>
                 <div className="mt-2">
-                  <ApplicationPage states={{
-                    selectionState
-                  }}/>
+                  {editState && response ? (
+                    <EditPage
+                      submitForm={submitForm}
+                      states={{
+                        uploadState: uploadState,
+                        setUploadState: setUploadState,
+                        response: response,
+                        selectedGroup: selectedGroup
+                      }}
+                    />
+                  ) : (
+                    <ApplicationPage
+                      states={{
+                        response,
+                        setResponse,
+                        selectedGroup,
+                        setSelectedGroup,
+                        selectionState,
+                      }}/>
+                  )}
                 </div>
               </>
             )}
           </div>
-        </>
+        </div>
       )}
   <Toaster/>
-  <ConfirmationDialog states={{
-    dialogState: confirmationDialog,
-    setDialogState: setConfirmationDialog
-  }} dialogData={confirmationData}/>
+  <ConfirmationDialog
+    states={{
+      dialogState: confirmationDialog,
+      setDialogState: setConfirmationDialog
+    }}
+    dialogData={confirmationData}/>
+  <AlertDialog open={uploadState}>
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <Carousel className="w-full">
+          <CarouselContent>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <CarouselItem key={index}>
+                <div className="p-1">
+                  <Card>
+                    <CardContent className="flex aspect-square items-center justify-center p-6">
+                      <span className="text-4xl font-semibold">{index + 1}</span>
+                    </CardContent>
+                  </Card>
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious />
+          <CarouselNext />
+        </Carousel>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel onClick={() => {
+          setUploadState(false)
+        }}>Cancel</AlertDialogCancel>
+        <AlertDialogAction
+          onClick={() => {
+          }}
+        >Continue</AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </div>
 )
 }

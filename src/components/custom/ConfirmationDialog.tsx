@@ -3,10 +3,8 @@ import {
   AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
-  AlertDialogTrigger
 } from "@/components/ui/alert-dialog.tsx";
 import {Dispatch, SetStateAction} from "react";
-import {b} from "vite/dist/node/types.d-aGj9QkWt";
 
 interface DialogData{
   title?:string,
@@ -32,7 +30,11 @@ const ConfirmationDialog = (
           <AlertDialogCancel onClick={() => {
             states?.setDialogState(false)
           }}>Cancel</AlertDialogCancel>
-          <AlertDialogAction>Continue</AlertDialogAction>
+          <AlertDialogAction
+            onClick={() => {
+              dialogData.action()
+            }}
+          >Continue</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

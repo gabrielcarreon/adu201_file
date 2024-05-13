@@ -11,6 +11,7 @@ require_once 'BaseController.php';
 require_once './database/DB.php';
 require_once './models/Teacher.php';
 require_once './models/Fields.php';
+require_once './php/dummy.php';
 class UserController extends BaseController
 {
     public function __construct()
@@ -21,67 +22,113 @@ class UserController extends BaseController
     {
         if(!isset($_SESSION)) session_start();
 
-        //!debug
-        $empNo = '2022070096';
-//        $empNo = $_SESSION['AdUOLLMSidno2'];
+        if(DEBUG){
+            response(array("message" => json_decode(DUMMY)));
+        }
+
+        $empNo = $_SESSION['AdUOLLMSidno2'];
 
         $map = array();
         $fCodeMap = array(
-            "Parents" => "('30M', '30F')",
-            "Children" => "('20')",
+            "Parent" => "('30M', '30F')",
+            "Child" => "('20')",
             "Spouse" => "('10')",
-            "Siblings" => "('40')"
+            "Sibling" => "('40')"
         );
 
-        $fields = DB::raw("SELECT g.group_id, f.descript, f.table_name, f.field_name, f.is_multiple_entries, f.data_type, sg.sub_group_id, g.descript AS group_name, sg.descript AS sub_group_name FROM db201_file.fields f 
+        $fields = DB::raw("SELECT f.id AS primary_key, f.field_id, g.group_id, f.is_for_approval, f.descript, f.table_name, f.field_name, f.is_multiple_entries, f.data_type, sg.sub_group_id, g.descript AS group_name, sg.descript AS sub_group_name FROM db201_file.fields f 
             LEFT JOIN db201_file.groups g ON f.group_id = g.id 
             LEFT JOIN db201_file.sub_groups sg ON f.sub_group_id = sg.id ORDER BY f.group_id, f.sub_group_id, f.descript", array(), 'mysql');
 
         $empCid = "";
         $response = array();
+        $fieldsData = array();
         $queryPlaceholder = "";
         $currentTable = "emp";
+        $tempArray = array();
         foreach ($fields as $index => $field){
             switch ($field['table_name']){
                 case "emp":
-                case "emp_fam_others":
-                    if($field['table_name'] == "emp"){
-                        $rst = DB::raw("SELECT cid, $field[field_name] FROM aduhr.dbo.$field[table_name] WHERE emp_no = ?", array($empNo), 116);
-                        $empCid = $rst[0]['cid'];
-                        $field['data'] = $rst[0][$field['field_name']];
-                    }else{
-                        $fCode = $fCodeMap[$field['descript']];
-                        $rst = DB::raw("SELECT name FROM aduhr.dbo.$field[table_name] WHERE emp_id = ? AND fcode IN $fCode", array($empCid), 116);
-                        $field['data'] = $rst;
-                    }
+                    $rst = DB::raw("SELECT cid, $field[field_name] FROM aduhr.dbo.$field[table_name] WHERE emp_no = ?", array($empNo), 116);
+                    $empCid = $rst[0]['cid'];
+
+                    $attachment = DB::raw("SELECT descript, a.attachment_id FROM db201_file.attachments a 
+                        JOIN db201_file.field_attachments fa ON a.id = fa.attachment_id
+                        WHERE fa.fields_id = ?", array($field['primary_key']), 'mysql');
+
+                    $field['attachments'] = $attachment;
+                    $field['data'] = $rst[0][$field['field_name']];
+
                     $response[$field['group_id']]['name'] = $field['group_name'];
                     $response[$field['group_id']]['id'] = $field['group_id'];
 
                     $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['id'] = $field['sub_group_id'];
                     $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['name'] = $field['sub_group_name'];
+                    $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['is_multiple_entries'] = $field['is_multiple_entries'];
+
                     $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['data'][] = $field;
+                    break;
+                case "emp_fam_others":
+                    $fCode = $fCodeMap[$field['descript']];
+
+                    $rst = DB::raw("SELECT name AS '$field[descript]' FROM aduhr.dbo.$field[table_name] WHERE emp_id = ? AND fcode IN $fCode", array($empCid), 116);
+                    $attachment = DB::raw("SELECT descript, a.attachment_id FROM db201_file.attachments a 
+                        JOIN db201_file.field_attachments fa ON a.id = fa.attachment_id
+                        WHERE fa.fields_id = ?", array($field['primary_key']), 'mysql');
+
+                    foreach ($rst as $result){
+                        $field['data'] = current($result);
+                        $field['is_multiple_entries'] = 0;
+                        $field['attachments'] = $attachment;
+                        $tempArray[] = $field;
+                    }
+
+                    $response[$field['group_id']]['name'] = $field['group_name'];
+                    $response[$field['group_id']]['id'] = $field['group_id'];
+
+                    $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['id'] = $field['sub_group_id'];
+                    $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['name'] = $field['sub_group_name'];
+                    $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['is_multiple_entries'] = $field['is_multiple_entries'];
+                    $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['fields'][$field['field_id']] = array(
+                        "data_type" => $field['data_type'],
+                        "label" => $field['descript'],
+                        "attachments" => $attachment,
+                    );
+                    $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['data'][$field['field_id']] = $tempArray;
+                    $tempArray = array();
                     break;
                 case "emp_educ_h":
                 case "emp_educ_l":
                 case "emp_emp_h":
-                    if($currentTable == 'emp') $currentTable = $field['table_name'];
-                    if($currentTable != $field['table_name'] || !isset($fields[$index + 1])){
-                        if(!isset($fields[$index + 1])) $queryPlaceholder.= " $field[field_name] AS '$field[descript]',";
-                        $queryPlaceholder = rtrim($queryPlaceholder, ',');
-                        $rst =  DB::raw("SELECT $queryPlaceholder FROM aduhr.dbo.$currentTable WHERE emp_id = ?", array($empCid), 116);
-                        $response[$fields[$index - 1]['group_id']]['name'] = $fields[$index - 1]['group_name'];
-                        $response[$fields[$index - 1]['group_id']]['id'] = $fields[$index - 1]['group_id'];
+                    $rst = DB::raw("SELECT $field[field_name] FROM aduhr.dbo.$field[table_name] WHERE emp_id = ?", array($empCid), 116);
 
-                        $response[$fields[$index - 1]['group_id']]['sub_groups'][$fields[$index - 1]['sub_group_id']]['id'] = $fields[$index - 1]['sub_group_id'];
-                        $response[$fields[$index - 1]['group_id']]['sub_groups'][$fields[$index - 1]['sub_group_id']]['name'] = $fields[$index - 1]['sub_group_name'];
-                        $response[$fields[$index - 1]['group_id']]['sub_groups'][$fields[$index - 1]['sub_group_id']]['is_multiple_entries'] = $field['is_multiple_entries'];
-                        $response[$fields[$index - 1]['group_id']]['sub_groups'][$fields[$index - 1]['sub_group_id']]['data'][] = $rst;
-                        $queryPlaceholder = "";
-                        $currentTable = $field['table_name'];
+                    $entries = $field['is_multiple_entries'];
+
+                    $attachment = DB::raw("SELECT descript, a.attachment_id FROM db201_file.attachments a 
+                            JOIN db201_file.field_attachments fa ON a.id = fa.attachment_id
+                            WHERE fa.fields_id = ?", array($field['primary_key']), 'mysql');
+
+                    foreach ($rst as $result){
+                        $field['data'] = current($result);
+                        $field['is_multiple_entries'] = 0;
+                        $field['attachments'] = $attachment;
+                        $tempArray[] = $field;
                     }
 
-                    $queryPlaceholder.= " $field[field_name] AS '$field[descript]',";
-                    $currentTable = $field['table_name'];
+                    $response[$field['group_id']]['name'] = $field['group_name'];
+                    $response[$field['group_id']]['id'] = $field['group_id'];
+
+                    $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['id'] = $field['sub_group_id'];
+                    $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['name'] = $field['sub_group_name'];
+                    $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['is_multiple_entries'] = $entries;
+                    $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['number_of_entries'] = count($rst);
+                    $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['fields'][$field['field_id']] = array(
+                        "data_type" => $field['data_type'],
+                        "label" => $field['descript'],
+                        "attachments" => $attachment,
+                    );
+                    $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['data'][$field['field_id']] = $tempArray;
+                    $tempArray = array();
                     break;
             }
         }
@@ -124,42 +171,77 @@ class UserController extends BaseController
 }
 
 
-//            if($field['sub_group_name'] == "") $field['sub_group_name'] = "NG";
-//            switch ($field['table_name']){
-//                case "emp":
-//                    $rst = DB::raw("SELECT cid, $field[field_name] FROM aduhr.dbo.$field[table_name] WHERE emp_no = ?", array($empNo), 116);
-//                    $empCid = $rst[0]['cid'];
-//                    $field['data'] = $rst[0][$field['field_name']];
-//                    $response[$field['group_name']][$field['sub_group_name']]['data'][] = $field;
-//                    $response[$field['group_name']][$field['sub_group_name']]['sub_group'] = $field['sub_group_id'];
-//                    break;
-//                case "emp_fam_others":
-//                    $fCode = $fCodeMap[$field['descript']];
-//                    $rst = DB::raw("SELECT name FROM aduhr.dbo.$field[table_name] WHERE emp_id = ? AND fcode IN $fCode", array($empCid), 116);
-//                    $field['data'] = $rst;
-//                    $response[$field['group_name']][$field['sub_group_name']]['data'][] = $field;
-//                    $response[$field['group_name']][$field['sub_group_name']]['sub_group'] = $field['sub_group_id'];
-//                    break;
-//                case "emp_educ_h":
-//                case "emp_educ_l":
-//                case "emp_emp_h":
-//                    if($currentTable == 'emp') $currentTable = $field['table_name'];
+//foreach ($fields as $index => $field){
+//    switch ($field['table_name']){
+//        case "emp":
+//            $rst = DB::raw("SELECT cid, $field[field_name] FROM aduhr.dbo.$field[table_name] WHERE emp_no = ?", array($empNo), 116);
+//            $empCid = $rst[0]['cid'];
+//            $field['data'] = $rst[0][$field['field_name']];
 //
-//                    if($currentTable != $field['table_name'] || !isset($fields[$index + 1])){
-//                        if(!isset($fields[$index + 1])) $queryPlaceholder.= " $field[field_name] AS '$field[descript]',";
+//            $response[$field['group_id']]['name'] = $field['group_name'];
+//            $response[$field['group_id']]['id'] = $field['group_id'];
 //
-//                        $queryPlaceholder = rtrim($queryPlaceholder, ',');
-//                        $rst =  DB::raw("SELECT $queryPlaceholder FROM aduhr.dbo.$currentTable WHERE emp_id = ?", array($empCid), 116);
-//                        $response[$fields[$index - 1]['group_name']][$fields[$index - 1]['sub_group_name'] != "" ? $fields[$index - 1]['sub_group_name'] : "NG"]["data"] = $rst;
-//                        $response[$fields[$index - 1]['group_name']][$fields[$index - 1]['sub_group_name'] != "" ? $fields[$index - 1]['sub_group_name'] : "NG"]["multientry"] = $field['is_multiple_entries'];
-//                        $response[$fields[$index - 1]['group_name']][$fields[$index - 1]['sub_group_name'] != "" ? $fields[$index - 1]['sub_group_name'] : "NG"]["sub_group"] = $field['is_multiple_entries']
-//                            ? $fields[$index - 1]['sub_group_id']
-//                            : $fields[$index - 1]['field_name'];
-//                        $queryPlaceholder = "";
-//                        $currentTable = $field['table_name'];
-//                    }
+//            $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['id'] = $field['sub_group_id'];
+//            $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['name'] = $field['sub_group_name'];
+//            $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['data'][] = $field;
+//            break;
+//        case "emp_fam_others":
+//            $fCode = $fCodeMap[$field['descript']];
 //
-//                    $queryPlaceholder.= " $field[field_name] AS '$field[descript]',";
-//                    $currentTable = $field['table_name'];
-//                    break;
+//            $rst = DB::raw("SELECT name AS '$field[descript]' FROM aduhr.dbo.$field[table_name] WHERE emp_id = ? AND fcode IN $fCode", array($empCid), 116);
+//
+//            foreach ($rst as $result){
+//                $field['data'][] = $result;
 //            }
+//
+//            $response[$field['group_id']]['name'] = $field['group_name'];
+//            $response[$field['group_id']]['id'] = $field['group_id'];
+//
+//            $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['id'] = $field['sub_group_id'];
+//            $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['name'] = $field['sub_group_name'];
+//            $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['is_multiple_entries'] = $field['is_multiple_entries'];
+//            $response[$field['group_id']]['sub_groups'][$field['sub_group_id']]['data'][] = $field;
+//            break;
+//        case "emp_educ_h":
+//        case "emp_educ_l":
+//        case "emp_emp_h":
+//            if($currentTable == 'emp') $currentTable = $field['table_name'];
+//            if($currentTable != $field['table_name'] || !isset($fields[$index + 1])){
+//                if(!isset($fields[$index + 1])){
+//                    $queryPlaceholder.= " $field[field_name] AS '$field[descript]',";
+//
+//                    $fieldsData[$fields[$index]['field_name']] = (object) array(
+//                        "label" => $fields[$index]['descript'],
+//                        "data_type" => $fields[$index]['data_type'],
+//                        "is_for_approval" => $fields[$index]['is_for_approval'],
+//                    );
+//                }
+//
+//                $queryPlaceholder = rtrim($queryPlaceholder, ',');
+//                $rst =  DB::raw("SELECT $queryPlaceholder FROM aduhr.dbo.$currentTable WHERE emp_id = ?", array($empCid), 116);
+//
+//
+//                $response[$fields[$index - 1]['group_id']]['name'] = $fields[$index - 1]['group_name'];
+//                $response[$fields[$index - 1]['group_id']]['id'] = $fields[$index - 1]['group_id'];
+//
+//                $response[$fields[$index - 1]['group_id']]['sub_groups'][$fields[$index - 1]['sub_group_id']]['id'] = $fields[$index - 1]['sub_group_id'];
+//                $response[$fields[$index - 1]['group_id']]['sub_groups'][$fields[$index - 1]['sub_group_id']]['name'] = $fields[$index - 1]['sub_group_name'];
+//                $response[$fields[$index - 1]['group_id']]['sub_groups'][$fields[$index - 1]['sub_group_id']]['is_multiple_entries'] = $field['is_multiple_entries'];
+//                $response[$fields[$index - 1]['group_id']]['sub_groups'][$fields[$index - 1]['sub_group_id']]['fields'] = $fieldsData;
+//                $response[$fields[$index - 1]['group_id']]['sub_groups'][$fields[$index - 1]['sub_group_id']]['data'] = $rst;
+//                $queryPlaceholder = "";
+//                $currentTable = $field['table_name'];
+//                $fieldsData = array();
+//            }
+//            $fieldsData[$fields[$index]['descript']] = (object) array(
+//                "field_name" => $fields[$index]['field_name'],
+//                "data_type" => $fields[$index]['data_type'],
+//                "is_for_approval" => $fields[$index]['is_for_approval'],
+//            );
+//
+//
+//            $queryPlaceholder.= " $field[field_name] AS '$field[descript]',";
+//            $currentTable = $field['table_name'];
+//            break;
+//    }
+//}
