@@ -1,8 +1,8 @@
 <?php
-
+use Api\Http\Request;
 class Employees
 {
-    public function __construct()
+    public function __construct(Request $request)
     {
         if(!isset($_SESSION)) session_start();
 

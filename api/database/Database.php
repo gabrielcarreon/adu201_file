@@ -32,6 +32,11 @@ class Database
         }
         return true;
     }
+
+    public static function lastInsertId($db){
+        require 'D:\Sites\dbcon\dbconi.php';
+        return mysqli_insert_id($dbc);
+    }
     public static function select($query, $params, $db, $debug = false)
     {
         $response = array();
@@ -43,10 +48,11 @@ class Database
             $obj = new \stdClass();
             $obj->query = $query;
             $obj->params = $params;
-            return $obj;
+            debug($obj);
         }
 
         $stmt = Database::prepareStatement($query, $params);
+
 
         if (Database::$connection == "MYSQL") {
             $result = $stmt[0]->get_result();
@@ -81,7 +87,13 @@ class Database
         if (Database::checkBindParamError($query, Database::$uniqueToken, $params)) {
             return array("response" => 400, "error" => "parameters-mismatch");
         }
-        if ($debug) return $db;
+        if ($debug){
+            $obj = new \stdClass();
+            $obj->query = $query;
+            $obj->params = $params;
+            $obj->db = $db;
+            debug($obj);
+        }
         $stmt = Database::prepareStatement($query, $params);
         if (!$return) return;
         if (Database::$connection == "MYSQL") {
@@ -141,64 +153,13 @@ class Database
         return $response;
     }
     /**
-     * Inserts data into the specified table and returns the inserted ID.
-     *
-     * @param array $params The parameters containing the data to be inserted.
-     * @param string $table The name of the table to insert the data into.
-     * @param string $db The name of the database to use.
-     * @return mixed The inserted ID if a single row is inserted, or true if multiple rows are inserted.
-     */
-    public static function insertReturnLID($params, $table, $db)
-    {
-        Database::getDatabaseConnection($db);
-
-        /*
-            QUERY BUILDER
-        */
-        $query = "INSERT INTO $table (";
-        $keyArray = array();
-        $valuesArray = array();
-        foreach ($params as $datasets) {
-            foreach ($datasets as $key => $values) {
-                if (!in_array($key, $keyArray)) {
-                    $keyArray[] = $key;
-                    $query .= "$key, ";
-                }
-                $valuesArray[] = $values;
-            }
-        }
-        $query = rtrim($query, ', ') . ") VALUES ";
-        $initCount = 0;
-        $keyCount = count($keyArray);
-        $isMultiInsert = (count($valuesArray) / count($keyArray)) > 1;
-        foreach ($valuesArray as $value) {
-            if ($initCount == 0) {
-                $query .= "(";
-            } elseif ($keyCount == $initCount) {
-                $query = rtrim($query, ', ') . "), (";
-                $initCount = 0;
-            }
-            $query .= "?, ";
-            $initCount++;
-        }
-        $query = rtrim($query, ', ') . ")";
-
-        if (Database::checkBindParamError($query, Database::$uniqueToken, $valuesArray)) {
-            return array("response" => 400, "error" => "parameters-mismatch");
-        }
-        $rst = Database::prepareStatement($query, $params);
-        return $isMultiInsert ? true : $rst[1];
-    }
-
-
-    /**
      * Inserts data into a specified table in the database.
      *
      * @param array $params An array of datasets containing key-value pairs to be inserted.
      * @param string $table The name of the table to insert data into.
      * @param string $db The name of the database to connect to.
      * @param bool $debug If true, the query will be printed to the console.
-     * @return bool|array Returns true if the data was successfully inserted, or an array with a response code and error message if there was an error.
+     * @return bool|array|object Returns true if the data was successfully inserted, or an array with a response code and error message if there was an error.
      */
     public static function insert($params, $table, $db, $debug)
     {
@@ -230,12 +191,21 @@ class Database
             $initCount++;
         }
         $query = rtrim($query, ', ') . ")";
-        if ($debug) return $query;
+        if ($debug){
+            $obj = new \stdClass();
+            $obj->query = $query;
+            $obj->params = $params;
+            $obj->db = $db;
+            debug($obj);
+        }
         if (Database::checkBindParamError($query, Database::$uniqueToken, $valuesArray)) {
             return array("error" => "parameters-mismatch");
         }
         $stmt = Database::prepareStatement($query, $params);
-        return $stmt[1];
+        return (object) array(
+            "status" => $stmt[1],
+            "properties" => $stmt[0],
+        );
     }
     public static function updateDelete($params, $db, $table, $condition, $conditionParam, $debug)
     {
@@ -252,14 +222,21 @@ class Database
         $valuesArray = array_merge($valuesArray, $conditionParam);
         $query =  $query .= " " . $condition;
         if ($debug) {
-            return array($query, $valuesArray);
+            $obj = new \stdClass();
+            $obj->query = $query;
+            $obj->params = $valuesArray;
+            $obj->db = $db;
+            debug($obj);
         }
         Database::getDatabaseConnection($db);
         if (Database::checkBindParamError($query, Database::$uniqueToken, $valuesArray)) {
             return array("response" => 400, "error" => "parameters-mismatch");
         }
         $rst = Database::prepareStatement($query, $valuesArray);
-        return $rst[1];
+        return (object) array(
+            "status" => $rst[1],
+            "properties" => $rst[0]
+        );
         // return Database::$db->affected_rows;
     }
 
@@ -333,18 +310,17 @@ class Database
 
                     $bindParams[] = &$bindTypes;
                     foreach ($bindParamArray as $key => $value) {
-                        $bindParams[] = & $value;
+//                        $bindParams[] = & $value;
+                        $bindParams[] = & $bindParamArray[$key];
                     }
 
                     // Use call_user_func_array to invoke bind_param
                     call_user_func_array(array($stmt, 'bind_param'), $bindParams);
                 }
-
                 $stmt->execute();
 
                 // Commit transaction
                 Database::$db->commit();
-
                 return array($stmt, true);
             } catch (\Exception $e) {
                 // Rollback transaction on exception

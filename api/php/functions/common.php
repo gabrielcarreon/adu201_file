@@ -24,29 +24,6 @@ function validateReferer($uri)
     return $refer == $uri ? true : false;
 }
 
-// validate input
-function validate($input)
-{
-    $errorArray = array();
-    foreach ($input as $index => $key) {
-        if (strlen($input[$index]['value']) > $input[$index]['length']) {
-            $errorArray[] = array(
-                "field" => $input[$index]['name'],
-                "error" => "length",
-            );
-        }
-        if ($input[$index]['required']) {
-            if (empty($input[$index]['value']) || !strlen($input[$index]['value'])) {
-                $errorArray[] = array(
-                    "field" => $input[$index]['name'],
-                    "error" => "required",
-                );
-            }
-        }
-    }
-    if (count($errorArray) > 0) exit(json_encode($errorArray));
-    return true;
-}
 function returnContext($array)
 {
     return stream_context_create(array(
@@ -398,5 +375,23 @@ if(!function_exists('return_dump')){
 if(!function_exists('dd')){
     function dd($data){
         exit(var_dump($data));
+    }
+}
+
+if(!function_exists('debug')){
+    function debug($data){
+        http_response_code(400);
+        exit(json_encode($data));
+    }
+}
+if (!function_exists('getallheaders')) {
+    function getallheaders() {
+        $headers = array();
+        foreach ($_SERVER as $name => $value) {
+            if (substr($name, 0, 5) == 'HTTP_') {
+                $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
+            }
+        }
+        return $headers;
     }
 }

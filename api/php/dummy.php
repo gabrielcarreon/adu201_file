@@ -1,7 +1,5 @@
 <?php
-
-const DUMMY = '
-    {
+const DUMMY = '{
     "profile": {
       "name": "Profile",
       "id": "profile",
@@ -12,28 +10,7 @@ const DUMMY = '
           "is_multiple_entries": 0,
           "data": [
             {
-              "primary_key": 3,
-              "field_id": "fname",
-              "group_id": "profile",
-              "is_for_approval": 1,
-              "descript": "First name",
-              "table_name": "emp",
-              "field_name": "fname",
-              "is_multiple_entries": 0,
-              "data_type": "text",
-              "sub_group_id": "basic_info",
-              "group_name": "Profile",
-              "sub_group_name": "Basic Information",
-              "attachments": [
-                {
-                  "descript": "PSA Birth Certificate",
-                  "attachment_id": "psa"
-                }
-              ],
-              "data": "GABRIEL OLIVER"
-            },
-            {
-              "primary_key": 1,
+              "primary_key": 38
               "field_id": "lname",
               "group_id": "profile",
               "is_for_approval": 1,
@@ -174,7 +151,7 @@ const DUMMY = '
               "table_name": "emp",
               "field_name": "sex",
               "is_multiple_entries": 0,
-              "data_type": "text",
+              "data_type": "select|[\r\n   {\r\n     \"label\": \"Male\",\r\n     \"value\": \"MALE\"\r\n   },\r\n   {\r\n     \"label\": \"Female\",\r\n     \"value\": \"FEMALE\"\r\n   }\r\n ]",
               "sub_group_id": "personal_info",
               "group_name": "Profile",
               "sub_group_name": "Personal Information",
@@ -537,43 +514,56 @@ const DUMMY = '
           "name": "Family",
           "is_multiple_entries": 1,
           "fields": {
-            "child": {
-              "data_type": "text",
-              "label": "Child",
-              "attachments": [
+            "family_info": {
+              "name": "family",
+              "is_for_approval": 1,
+              "data_type": "select-group",
+              "descript": "Family member",
+              "main_data_type": "text",
+              "selection": [
                 {
-                  "descript": "PSA Birth Certificate",
-                  "attachment_id": "psa"
-                }
-              ]
-            },
-            "parent": {
-              "data_type": "text",
-              "label": "Parent",
-              "attachments": [
+                  "field_id": "child",
+                  "data_type": "text",
+                  "label": "Child",
+                  "attachments": [
+                    {
+                      "descript": "PSA Birth Certificate",
+                      "attachment_id": "psa"
+                    }
+                  ]
+                },
                 {
-                  "descript": "PSA Birth Certificate",
-                  "attachment_id": "psa"
-                }
-              ]
-            },
-            "sibling": {
-              "data_type": "text",
-              "label": "Sibling",
-              "attachments": [
+                  "field_id": "parent",
+                  "data_type": "text",
+                  "label": "Parent",
+                  "attachments": [
+                    {
+                      "descript": "PSA Birth Certificate",
+                      "attachment_id": "psa"
+                    }
+                  ]
+                },
                 {
-                  "descript": "PSA Birth Certificate",
-                  "attachment_id": "psa"
-                }
-              ]
-            },
-            "spouse": {
-              "data_type": "text",
-              "label": "Spouse",
-              "attachments": [
+                  "field_id": "sibling",
+                  "data_type": "text",
+                  "label": "Sibling",
+                  "attachments": [
+                    {
+                      "descript": "PSA Birth Certificate",
+                      "attachment_id": "psa"
+                    }
+                  ]
+                },
                 {
-                  "descript": "Marriage Contract",
-                  "attachment_id": "marriage_contract"
+                  "field_id": "spouse",
+                  "data_type": "text",
+                  "label": "Spouse",
+                  "attachments": [
+                    {
+                      "descript": "Marriage Contract",
+                      "attachment_id": "marriage_contract"
+                    }
+                  ]
                 }
               ]
             }
@@ -595,27 +585,6 @@ const DUMMY = '
                 "group_name": "Family Background",
                 "sub_group_name": "Family",
                 "data": "JOCELYN F. SMITH",
-                "attachments": [
-                  {
-                    "descript": "PSA Birth Certificate",
-                    "attachment_id": "psa"
-                  }
-                ]
-              },
-              {
-                "primary_key": 29,
-                "field_id": "parent",
-                "group_id": "fam_background",
-                "is_for_approval": 1,
-                "descript": "Parent",
-                "table_name": "emp_fam_others",
-                "field_name": "name",
-                "is_multiple_entries": 0,
-                "data_type": "text",
-                "sub_group_id": "family_info",
-                "group_name": "Family Background",
-                "sub_group_name": "Family",
-                "data": "RODRIGO M. CARREON",
                 "attachments": [
                   {
                     "descript": "PSA Birth Certificate",
@@ -645,27 +614,6 @@ const DUMMY = '
                     "attachment_id": "psa"
                   }
                 ]
-              },
-              {
-                "primary_key": 31,
-                "field_id": "sibling",
-                "group_id": "fam_background",
-                "is_for_approval": 1,
-                "descript": "Sibling",
-                "table_name": "emp_fam_others",
-                "field_name": "name",
-                "is_multiple_entries": 0,
-                "data_type": "text",
-                "sub_group_id": "family_info",
-                "group_name": "Family Background",
-                "sub_group_name": "Family",
-                "data": "KRIZA CARREON",
-                "attachments": [
-                  {
-                    "descript": "PSA Birth Certificate",
-                    "attachment_id": "psa"
-                  }
-                ]
               }
             ],
             "spouse": []
@@ -682,8 +630,9 @@ const DUMMY = '
           "name": "Licensure/Board Exams Taken",
           "is_multiple_entries": 1,
           "number_of_entries": 0,
-          "fields": {
-            "bexam": {
+          "fields": [
+            {
+              "field_id": "bexam",
               "data_type": "text",
               "label": "Board or licensure exam taken",
               "attachments": [
@@ -695,9 +644,12 @@ const DUMMY = '
                   "descript": "Result of Examination",
                   "attachment_id": "exam_result"
                 }
-              ]
+              ],
+              "is_for_approval": 1,
+              "descript": "Board or licensure exam taken"
             },
-            "licenseno": {
+            {
+              "field_id": "licenseno",
               "data_type": "text",
               "label": "License no",
               "attachments": [
@@ -709,9 +661,12 @@ const DUMMY = '
                   "descript": "Result of Examination",
                   "attachment_id": "exam_result"
                 }
-              ]
+              ],
+              "is_for_approval": 1,
+              "descript": "License no"
             },
-            "rating": {
+            {
+              "field_id": "rating",
               "data_type": "text",
               "label": "Rating",
               "attachments": [
@@ -723,9 +678,12 @@ const DUMMY = '
                   "descript": "Result of Examination",
                   "attachment_id": "exam_result"
                 }
-              ]
+              ],
+              "is_for_approval": 1,
+              "descript": "Rating"
             },
-            "pdtaken": {
+            {
+              "field_id": "pdtaken",
               "data_type": "date",
               "label": "Valid until",
               "attachments": [
@@ -737,9 +695,11 @@ const DUMMY = '
                   "descript": "Result of Examination",
                   "attachment_id": "exam_result"
                 }
-              ]
+              ],
+              "is_for_approval": 1,
+              "descript": "Valid until"
             }
-          },
+          ],
           "data": {
             "bexam": [],
             "licenseno": [],
@@ -752,8 +712,9 @@ const DUMMY = '
           "name": "Schools attended",
           "is_multiple_entries": 1,
           "number_of_entries": 3,
-          "fields": {
-            "course": {
+          "fields": [
+            {
+              "field_id": "course",
               "data_type": "text",
               "label": "Course or Degree",
               "attachments": [
@@ -765,9 +726,12 @@ const DUMMY = '
                   "descript": "Diploma",
                   "attachment_id": "diploma"
                 }
-              ]
+              ],
+              "is_for_approval": 1,
+              "descript": "Course or Degree"
             },
-            "syear": {
+            {
+              "field_id": "syear",
               "data_type": "text",
               "label": "Inclusive school year",
               "attachments": [
@@ -779,9 +743,12 @@ const DUMMY = '
                   "descript": "Diploma",
                   "attachment_id": "diploma"
                 }
-              ]
+              ],
+              "is_for_approval": 1,
+              "descript": "Inclusive school year"
             },
-            "level": {
+            {
+              "field_id": "level",
               "data_type": "text",
               "label": "Level",
               "attachments": [
@@ -793,9 +760,12 @@ const DUMMY = '
                   "descript": "Diploma",
                   "attachment_id": "diploma"
                 }
-              ]
+              ],
+              "is_for_approval": 1,
+              "descript": "Level"
             },
-            "school": {
+            {
+              "field_id": "school",
               "data_type": "text",
               "label": "School Name & Address",
               "attachments": [
@@ -807,9 +777,11 @@ const DUMMY = '
                   "descript": "Diploma",
                   "attachment_id": "diploma"
                 }
-              ]
+              ],
+              "is_for_approval": 1,
+              "descript": "School Name & Address"
             }
-          },
+          ],
           "data": {
             "course": [
               {
@@ -1132,8 +1104,9 @@ const DUMMY = '
           "name": "Employment history",
           "is_multiple_entries": 1,
           "number_of_entries": 1,
-          "fields": {
-            "company": {
+          "fields": [
+            {
+              "field_id": "company",
               "data_type": "text",
               "label": "Company",
               "attachments": [
@@ -1141,19 +1114,25 @@ const DUMMY = '
                   "descript": "Certificate of Employment",
                   "attachment_id": "coe"
                 }
-              ]
+              ],
+              "is_for_approval": 1,
+              "descript": "Company"
             },
-            "idates": {
-              "data_type": "date",
+            {
+              "field_id": "idates",
+              "data_type": "text",
               "label": "Inclusive dates",
               "attachments": [
                 {
                   "descript": "Certificate of Employment",
                   "attachment_id": "coe"
                 }
-              ]
+              ],
+              "is_for_approval": 1,
+              "descript": "Inclusive dates"
             },
-            "position": {
+            {
+              "field_id": "position",
               "data_type": "text",
               "label": "Position",
               "attachments": [
@@ -1161,9 +1140,12 @@ const DUMMY = '
                   "descript": "Certificate of Employment",
                   "attachment_id": "coe"
                 }
-              ]
+              ],
+              "is_for_approval": 1,
+              "descript": "Position"
             },
-            "lpay": {
+            {
+              "field_id": "lpay",
               "data_type": "number",
               "label": "Rate",
               "attachments": [
@@ -1171,14 +1153,19 @@ const DUMMY = '
                   "descript": "Certificate of Employment",
                   "attachment_id": "coe"
                 }
-              ]
+              ],
+              "is_for_approval": 1,
+              "descript": "Rate"
             },
-            "lreason": {
+            {
+              "field_id": "lreason",
               "data_type": "text",
               "label": "Reason for leaving",
-              "attachments": []
+              "attachments": [],
+              "is_for_approval": 0,
+              "descript": "Reason for leaving"
             }
-          },
+          ],
           "data": {
             "company": [
               {
@@ -1213,7 +1200,7 @@ const DUMMY = '
                 "table_name": "emp_emp_h",
                 "field_name": "idates",
                 "is_multiple_entries": 0,
-                "data_type": "date",
+                "data_type": "text",
                 "sub_group_id": "employment_info",
                 "group_name": "Employment History",
                 "sub_group_name": "Employment history",

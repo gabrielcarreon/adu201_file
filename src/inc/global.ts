@@ -33,12 +33,3 @@ export const multiEntryForm = [
   "employment_info",
   "board_info"
 ]
-
-export interface Auth{
-  fname:string,
-  lname:string,
-  email:string,
-  _csrf_token:string,
-  image_url:string,
-  user_access:string
-}

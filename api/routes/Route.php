@@ -1,6 +1,8 @@
 <?php
 namespace Api\Routes;
 
+use Api\Http\Request;
+
 require_once 'routes.php';
 
 class Route
@@ -18,15 +20,19 @@ class Route
             if (!isset(self::$routes[$route])) response(array("message" => "Method not allowed."), 405);
             $response = self::$routes[$route];
 
-            //if request method does not match the route's method then return error 405
             if($response->method != $method) response(array("message" => "Method not allowed."), 405);
 
-            foreach ($response->middleware as $middleware) {
-                require_once './middlewares/' . $middleware . '.php';
-                new $middleware();
+            if(!APITEST){
+                foreach ($response->middleware as $middleware) {
+                    require_once './middlewares/' . $middleware . '.php';
+                    new $middleware(new Request());
+                }
             }
+
             $controller = $response->controller;
             $controller();
+
+
         }catch (Exception $e) {
             throw new Exception('Invalid api call');
         }
