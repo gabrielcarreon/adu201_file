@@ -1,10 +1,10 @@
 import {cn} from "@/lib/utils.ts";
-import {Check, Ellipsis} from "lucide-react";
+import {Check, ChevronsUpDown, Ellipsis} from "lucide-react";
 import React, {useState} from "react";
 import {
   Popover, PopoverContent, PopoverTrigger, Input, Button, FormControl, FormDescription,
   FormField, FormItem, FormLabel, FormMessage, Select, SelectContent, SelectItem,
-  SelectTrigger, SelectValue
+  SelectTrigger, SelectValue, Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem
 } from "@/components/ui";
 import {CalendarIcon} from "@radix-ui/react-icons";
 import Calendar from "react-calendar";
@@ -12,7 +12,7 @@ import {useDetectClickOutside} from "react-detect-click-outside";
 import 'react-calendar/dist/Calendar.css'
 import moment from "moment";
 
-const CustomTextField = ({ data, submitForm, form, states, styles }) => {
+export const CustomTextField = ({ data, submitForm, form, states, styles }) => {
   return (
     <FormField
       control={form.control}
@@ -58,7 +58,7 @@ const CustomTextField = ({ data, submitForm, form, states, styles }) => {
       )}/>
   )
 }
-const CustomDatePicker = ({ data, submitForm, form, states, styles }) => {
+export const CustomDatePicker = ({ data, submitForm, form, states, styles }) => {
   // const [date, setDate] = useState(new Date())
   const [open, setOpen] = useState(false)
   const ref = useDetectClickOutside({ onTriggered : () => {
@@ -119,7 +119,7 @@ const CustomDatePicker = ({ data, submitForm, form, states, styles }) => {
   )
 }
 
-const CustomSelect = ({ data, submitForm, form, states, styles }) => {
+export const CustomSelect = ({ data, submitForm, form, states, styles }) => {
   return (
     <FormField
       control={form.control}
@@ -178,7 +178,9 @@ const CustomSelect = ({ data, submitForm, form, states, styles }) => {
   )
 }
 
-const CustomComboBox = ({ data, submitForm, form, states, styles }) => {
+export const CustomComboBox = ({ data, submitForm, form, states, styles }) => {
+  const [open, setOpen] = React.useState(false)
+  const [value, setValue] = React.useState("")
   return (
     <FormField
       control={form.control}
@@ -187,48 +189,49 @@ const CustomComboBox = ({ data, submitForm, form, states, styles }) => {
       render={({ field }) => (
         <FormItem className={cn('', styles?.formItem)}>
           <FormLabel>{form.descript}</FormLabel>
-          <Select onValueChange={(e) => {
-            
-            if(form.selection) {
-              form.selection.forEach((option) => {
-                if(e === option.field_id){
-                  submitForm.setValue(form.field_name, {
-                    changed: submitForm.getValues(form.field_name).trueVal !== e,
-                    trueVal: option.field_id,
-                    val: e,
-                    is_for_approval: submitForm.getValues(data?.name).is_for_approval,
-                    attachments: option.attachments,
-                    partition: submitForm.getValues(data?.name).partition ?? 0
-                  })
-                }
-              })
-            }else {
-              submitForm.setValue(form.field_name, {
-                changed: submitForm.getValues(form.field_name).trueVal !== e,
-                trueVal: submitForm.getValues(form.field_name).trueVal,
-                val: e,
-                is_for_approval: submitForm.getValues(data?.name).is_for_approval,
-                attachments: submitForm.getValues(data?.name).attachments,
-                partition: submitForm.getValues(data?.name).partition ?? 0
-              })
-            }
-          }} defaultValue={field.value.val}>
-            <FormControl>
-              <SelectTrigger className={cn(``,
-                `${submitForm.getValues(form.field_name).changed && form.is_for_approval
-                  ? "bg-orange-100 hover:bg-orange-100 active:border-green-200"
-                  : submitForm.getValues(form.field_name).changed
-                    ? "hover:bg-green-100 bg-green-100"
-                    : ""}`)}>
-                <SelectValue placeholder={data?.placeholder} />
-              </SelectTrigger>
-            </FormControl>
-            <SelectContent>
-              {data?.options.map((option, key) => (
-                <SelectItem key={key} value={option.value}>{option.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={open}
+                className="w-[200px] justify-between"
+              >
+                {value
+                  ? data?.options.find((info) => info.value === value)?.label
+                  : "Select framework..."}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[200px] p-0">
+              <Command>
+                <CommandInput placeholder={attr?.placeholder} />
+                <CommandList>
+                  <CommandEmpty>{attr?.empty}</CommandEmpty>
+                  <CommandGroup>
+                    {data?.options.map((info) => (
+                      <CommandItem
+                        key={info.value}
+                        value={info.value}
+                        onSelect={(currentValue) => {
+                          setValue(currentValue === value ? "" : currentValue)
+                          setOpen(false)
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            value === info.value ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {info.label}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
           <FormDescription>{data?.description}</FormDescription>
           <FormMessage>{data?.message}</FormMessage>
         </FormItem>
@@ -236,5 +239,3 @@ const CustomComboBox = ({ data, submitForm, form, states, styles }) => {
     />
   )
 }
-
-export { CustomTextField, CustomDatePicker, CustomSelect }

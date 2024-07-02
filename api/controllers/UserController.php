@@ -56,7 +56,7 @@ class UserController extends BaseController
                     $field['data'] = $rst[0][$field['field_name']];
 
                     @list($type, $origin) = explode("|",$field['data_type']);
-                    if($origin && trim($type) == 'select'){
+                    if($origin && (trim($type) == 'select' || trim($type) == 'combo')){
                         @list($origin, $query) = explode("in", $origin);
                         if($query && trim($origin) == 'table'){
                             $field['data_type'] = self::getSelectFromTable($query);
@@ -86,6 +86,14 @@ class UserController extends BaseController
                         $field['is_multiple_entries'] = 1;
                         $field['attachments'] = $attachment;
                         $tempArray[] = $field;
+                    }
+
+                    @list($type, $origin) = explode("|",$field['data_type']);
+                    if($origin && (trim($type) == 'select' || trim($type) == 'combo')){
+                        @list($origin, $query) = explode("in", $origin);
+                        if($query && trim($origin) == 'table'){
+                            $field['data_type'] = self::getSelectFromTable($query);
+                        }
                     }
 
                     $response[$field['group_id']]['name'] = $field['group_name'];
@@ -127,6 +135,14 @@ class UserController extends BaseController
                         $field['is_multiple_entries'] = 1;
                         $field['attachments'] = $attachment;
                         $tempArray[] = $field;
+                    }
+
+                    @list($type, $origin) = explode("|",$field['data_type']);
+                    if($origin && (trim($type) == 'select' || trim($type) == 'combo')){
+                        @list($origin, $query) = explode("in", $origin);
+                        if($query && trim($origin) == 'table'){
+                            $field['data_type'] = self::getSelectFromTable($query);
+                        }
                     }
 
                     $response[$field['group_id']]['name'] = $field['group_name'];

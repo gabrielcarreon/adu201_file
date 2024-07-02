@@ -3,6 +3,7 @@ import { CustomDatePicker, CustomTextField, CustomSelect } from "@/components/cu
 import { multiEntryForm } from "@/inc/global.ts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Form } from "@/components/ui";
 import { TrashIcon } from "@radix-ui/react-icons";
+import {CustomComboBox} from "@/components/custom/CustomFields.jsx";
 
 const EditPage = ({submitForm, states}) => {
   const responseRef = states?.response
@@ -103,6 +104,12 @@ const EditPage = ({submitForm, states}) => {
       case 'combo':
         return (
           <CustomComboBox
+            data={{
+              options: JSON.parse(selection),
+              name: name
+            }}
+            submitForm={submitForm}
+            form={form}
             />
         )
     }
